@@ -1,14 +1,60 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 )
 
-type stationData struct {
-	Name string  `json:"name,omitempty"`
-	Temp float32 `json:"temperature,omitempty"`
+type Station struct {
+	ID        string  `json:"id,omitempty"`
+	Name      string  `json:"name,omitempty"`
+	Latitude  float32 `json:"latitude,omitempty"`
+	Longitude float32 `json:"longitude,omitempty"`
+	Distance  float32 `json:"distance,omitempty"`
+}
+
+func loadStations() ([]Station, error) {
+	var stations []Station
+
+	file, err := os.Open("data/ghcnd-stations.txt")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Eine Zeile im GHCN-Format muss mindestens 71 Zeichen lang sein
+		if len(line) < 71 {
+			continue
+		}
+
+		// Zerschneiden der Zeile an festen Positionen (Fixed Width)
+		id := strings.TrimSpace(line[0:11])
+		latStr := strings.TrimSpace(line[12:20])
+		longStr := strings.TrimSpace(line[21:30])
+		name := strings.TrimSpace(line[38:71])
+
+		// Text in Zahlen umwandeln
+		lat, _ := strconv.ParseFloat(latStr, 32)
+		long, _ := strconv.ParseFloat(longStr, 32)
+
+		// Station zur Liste hinzufügen
+		s := Station{
+			ID:        id,
+			Name:      name,
+			Latitude:  float32(lat),
+			Longitude: float32(long),
+		}
+		stations = append(stations, s)
+	}
+	return stations, nil
 }
 
 func helloHandler(w http.ResponseWriter, r *http.Request) {
@@ -16,51 +62,46 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "bla")
-	/*	response := httpStatus{
-			Status:  200,
-			Message: "Hallo",
-		}
-		encoder := json.NewEncoder(w)
-		err := encoder.Encode(response)
-		if err != nil {
-			response := httpStatus{
-				Status:  400,
-				Message: "Encoding failed",
-			}
-			encoder := json.NewEncoder(w)
-		}
-	*/
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "OK")
 }
 
 func stationHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	name := q.Get("name")
+	lat := q.Get("lat")
 	long := q.Get("long")
-	fmt.Println(long)
-	fmt.Println(name)
-	encoder := json.NewEncoder(w)
-	var data stationData
+	radius := q.Get("radius")
 
-	if long == "" {
+	if lat == "" || long == "" || radius == "" {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(w, "Fehler: Bitte geben Sie lat, long und radius an.")
 		return
 	}
-	if name == "moskau" {
-		data = stationData{
-			Name: "Moskau",
-			Temp: 21.7,
-		}
-	} else {
-		data = stationData{}
+
+	fmt.Println("Suche gestartet: Lat=", lat, "Long=", long, "Radius=", radius)
+
+	data := Station{
+		ID:        "GME00102380",
+		Name:      "NURNBERG",
+		Latitude:  49.47,
+		Longitude: 10.99,
+		Distance:  5.2, // km
 	}
-	encoder.Encode(data)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
 }
 
 func main() {
 	http.HandleFunc("/", helloHandler)        //Root URL
 	http.HandleFunc("/status", statusHandler) //Status URL
-	http.HandleFunc("/station", stationHandler)
 	fmt.Println("Starting server on :8080")
+	fmt.Println("Lade Stationsdaten")
+	allStations, err := loadStations()
+	if err != nil {
+		fmt.Println("Fehler beim Laden der Datei:", err)
+		return
+	}
+	fmt.Printf("Erfolg! %d Stationen geladen.\n", len(allStations))
+	http.HandleFunc("/station", stationHandler)
 	http.ListenAndServe(":8080", nil)
 }
