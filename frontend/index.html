@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Meteo Karte</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main class="layout-wrapper">
+        <form id="meteoForm">
+            <div class="input-group">
+                <label for="latitude">Breitengrad (-90 bis 90):</label>
+                <input type="number" id="latitude" min="-90" max="90" step="any">
+            </div>
+
+            <div class="input-group">
+                <label for="longitude">Längengrad (-180 bis 180):</label>
+                <input type="number" id="longitude" min="-180" max="180" step="any">
+            </div>
+
+            <div class="input-group">
+                <label>Radius:</label>
+                <div class="unit-input">
+                    <input type="number" id="radius"> <span>km</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Anzahl Stationen:</label>
+                <div class="unit-input">
+                    <span>Top</span> <input type="number" id="selection">
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn">Daten abrufen</button>
+        </form>
+
+        <div id="map"></div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
