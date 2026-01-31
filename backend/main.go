@@ -1,5 +1,6 @@
 package main
 
+//loading libaries
 import (
 	"bufio"
 	"encoding/csv"
@@ -19,15 +20,29 @@ type Response struct {
 	ErrorMsg string `json:"errorMessage"`
 }
 
-type StationData struct {
-	Date      time.Time `json:"date"`
-	DataValue int       `json:"dataValue"`
+// internal memory for each line
+type RawStationData struct {
+	Date        time.Time
+	ElementType string
+	Value       int
 }
 
-type MonthlyStationData struct {
-	Year     string  `json:"year"`
-	Month    string  `json:"month"`
-	AvgValue float64 `json:"value"`
+type AnnualStationData struct {
+	Year int      `json:"year"`
+	TMin *float64 `json:"tmin"`
+	TMax *float64 `json:"tmax"`
+}
+
+type SeasonalStationData struct {
+	Year   int      `json:"year"`
+	Season string   `json:"season"`
+	TMin   *float64 `json:"tmin"`
+	TMax   *float64 `json:"tmax"`
+}
+
+type StationDetailResponse struct {
+	Annual   []*AnnualStationData   `json:"annual,omitempty"`
+	Seasonal []*SeasonalStationData `json:"seasonal,omitempty"`
 }
 
 type Station struct {
@@ -44,9 +59,10 @@ type StationInventory struct {
 }
 
 var inventoryMap = make(map[string]*StationInventory)
+var allStations []*Station
 
+// loading the inventory file on start up
 func loadInventory() error {
-
 	url := "https://noaa-ghcn-pds.s3.amazonaws.com/ghcnd-inventory.txt"
 	resp, err := http.Get(url)
 	if err != nil {
@@ -88,19 +104,18 @@ func loadInventory() error {
 	return nil
 }
 
-func loadStations(latUsr float64, longUsr float64, radius int, limit int, startYear int, endYear int) ([]*Station, error) {
-	var stations []*Station
-
+// loading the stations file on start up
+func initStations() error {
 	url := "https://noaa-ghcn-pds.s3.amazonaws.com/ghcnd-stations.txt"
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("Netzwerkfehler: %v", err)
+		return fmt.Errorf("Netzwerkfehler: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Datei %s nicht gefunden (Status %d)", url, resp.StatusCode)
+		return fmt.Errorf("Datei %s nicht gefunden (Status %d)", url, resp.StatusCode)
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
@@ -110,55 +125,75 @@ func loadStations(latUsr float64, longUsr float64, radius int, limit int, startY
 			continue
 		}
 
-		// slicing
+		//parsing the information from ghcnd-stations.txt
 		id := strings.TrimSpace(line[0:11])
 		latStr := strings.TrimSpace(line[12:20])
 		longStr := strings.TrimSpace(line[21:30])
 		name := strings.TrimSpace(line[38:71])
 
-		// parse string to float
 		lat, _ := strconv.ParseFloat(latStr, 64)
 		long, _ := strconv.ParseFloat(longStr, 64)
 
-		const earthRadius = 6371.0
-		const p = math.Pi / 180
-
-		// calculate deltas
-		dLat := (latUsr - lat) * p
-		dLong := (longUsr - long) * p
-
-		// Haversine formula
-		a := math.Sin(dLat/2)*math.Sin(dLat/2) +
-			math.Cos(latUsr*p)*math.Cos(lat*p)*
-				math.Sin(dLong/2)*math.Sin(dLong/2)
-
-		// calculate distance
-		distance := earthRadius * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-
-		if id == "AE000041196" {
-			fmt.Printf("lat: %f long: %f name: %s distance: %f \n", lat, long, name, distance)
-		}
-
-		if distance > float64(radius) {
-			continue
-		}
-
-		inv, exists := inventoryMap[id]
-
-		if !exists || inv.FirstYear > startYear || inv.LastYear < endYear {
-			continue
-		}
-
+		//storing basisdata, distance remains unset -> will be calculated later
 		s := &Station{
 			ID:        id,
 			Name:      name,
 			Latitude:  &lat,
 			Longitude: &long,
+		}
+		allStations = append(allStations, s)
+	}
+	return nil
+}
+
+// searching for specific stations on given input variables
+func findStations(latUsr float64, longUsr float64, radius int, limit int, startYear int, endYear int) ([]*Station, error) {
+	var stations []*Station
+
+	const earthRadius = 6371.0
+	const p = math.Pi / 180
+
+	for _, s := range allStations {
+		if s.Latitude == nil || s.Longitude == nil {
+			continue
+		}
+
+		lat := *s.Latitude
+		long := *s.Longitude
+
+		//calculating distance with haversine formula
+		dLat := (latUsr - lat) * p
+		dLong := (longUsr - long) * p
+
+		a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+			math.Cos(latUsr*p)*math.Cos(lat*p)*
+				math.Sin(dLong/2)*math.Sin(dLong/2)
+
+		distance := earthRadius * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+		//filtering stations out of radius
+		if distance > float64(radius) {
+			continue
+		}
+
+		//filtering with inventory file if station has data available in given years
+		inv, exists := inventoryMap[s.ID]
+		if !exists || inv.FirstYear > startYear || inv.LastYear < endYear {
+			continue
+		}
+
+		//adding station to list
+		matchedStation := &Station{
+			ID:        s.ID,
+			Name:      s.Name,
+			Latitude:  s.Latitude,
+			Longitude: s.Longitude,
 			Distance:  distance,
 		}
-		stations = append(stations, s)
+		stations = append(stations, matchedStation)
 	}
 
+	//sorting the stations list
 	slices.SortFunc(stations, func(a, b *Station) int {
 		if a.Distance < b.Distance {
 			return -1
@@ -188,6 +223,10 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 // filter station list
 // write station (json)
 func stationsHandler(w http.ResponseWriter, r *http.Request) {
+	//cors handling
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 	q := r.URL.Query()
 	latStr := q.Get("lat")
 	longStr := q.Get("long")
@@ -276,16 +315,12 @@ func stationsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stationList, _ := loadStations(lat, long, radius, limit, start, end)
+	stationList, _ := findStations(lat, long, radius, limit, start, end)
 	response := Response{Data: stationList, ErrorMsg: ""}
 	enc.Encode(response)
-
-	fmt.Printf("long: %f, lat: %f, start:%d, end:%d, map:%d, station:%+v", long, lat, start, end, len(inventoryMap), inventoryMap["AE000041196"])
-
 }
 
-func loadStationData(id string) ([]*StationData, error) {
-	// folder with data for each weatherstation
+func loadStationData(id string) ([]RawStationData, error) {
 	url := fmt.Sprintf("https://noaa-ghcn-pds.s3.amazonaws.com/csv/by_station/%s.csv", id)
 
 	resp, err := http.Get(url)
@@ -297,70 +332,166 @@ func loadStationData(id string) ([]*StationData, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("Station %s nicht gefunden (Status %d)", id, resp.StatusCode)
 	}
+
 	reader := csv.NewReader(resp.Body)
-	var dataList []*StationData
+	var dataList []RawStationData
+	const layout = "20060102"
 
 	_, _ = reader.Read()
-
-	const layout = "20060102"
 
 	for {
 		line, err := reader.Read()
 		if err == io.EOF {
 			break
 		}
-		if err != nil {
-			return nil, err
+		if err != nil || len(line) < 4 {
+			continue
 		}
-		date, _ := time.Parse(layout, line[1])
-		value, _ := strconv.Atoi(line[3])
 
-		dataList = append(dataList, &StationData{
-			Date:      date,
-			DataValue: value,
+		//filtering for TMIN and TMAX only
+		element := line[2]
+		if element != "TMIN" && element != "TMAX" {
+			continue
+		}
+
+		date, err := time.Parse(layout, line[1])
+		if err != nil {
+			continue
+		}
+
+		//skipping empty data
+		val, err := strconv.Atoi(line[3])
+		if err != nil || val == -9999 {
+			continue
+		}
+
+		dataList = append(dataList, RawStationData{
+			Date:        date,
+			ElementType: element,
+			Value:       val,
 		})
 	}
 	return dataList, nil
 }
 
-func calculateAvgTemp(stationDataList []*StationData) []*MonthlyStationData {
-	type stats struct {
-		sum   int
-		count int
+// calculating yearly average for tmin and tmax
+func calculateAnnualAvg(rawData []RawStationData) []*AnnualStationData {
+	type Aggr struct {
+		sumMin, countMin int
+		sumMax, countMax int
 	}
-	// "1850-12" -> stats
-	monthlyStats := make(map[string]*stats)
-	for _, el := range stationDataList {
-		key := el.Date.Format("2006-01")
-		_, ok := monthlyStats[key]
-		if !ok {
-			monthlyStats[key] = &stats{}
+	stats := make(map[int]*Aggr)
+
+	for _, d := range rawData {
+		year := d.Date.Year()
+		if _, ok := stats[year]; !ok {
+			stats[year] = &Aggr{}
 		}
-		monthlyStats[key].count++
-		monthlyStats[key].sum += el.DataValue
+		switch d.ElementType {
+		case "TMIN":
+			stats[year].sumMin += d.Value
+			stats[year].countMin++
+		case "TMAX":
+			stats[year].sumMax += d.Value
+			stats[year].countMax++
+		}
 	}
-	avgTemp := []*MonthlyStationData{}
-	for k, v := range monthlyStats {
-		avg := (float64(v.sum) / float64(v.count)) / 10.0
-		parts := strings.Split(k, "-")
-		avgTemp = append(avgTemp, &MonthlyStationData{AvgValue: avg, Year: parts[0], Month: parts[1]})
+	var result []*AnnualStationData
+	for year, val := range stats {
+		sData := &AnnualStationData{Year: year}
+		if val.countMin > 0 {
+			avg := (float64(val.sumMin) / float64(val.countMin)) / 10
+			avg = math.Round(avg*100) / 100
+			sData.TMin = &avg
+		}
+		if val.countMax > 0 {
+			avg := (float64(val.sumMax) / float64(val.countMax)) / 10
+			avg = math.Round(avg*100) / 100
+			sData.TMax = &avg
+		}
+		result = append(result, sData)
 	}
-	slices.SortFunc(avgTemp, func(a, b *MonthlyStationData) int {
-		layout := "200601"
-		aDate, err := time.Parse(layout, a.Year+a.Month)
-		if err != nil {
-			return -1
+	slices.SortFunc(result, func(a, b *AnnualStationData) int { return a.Year - b.Year })
+	return result
+}
+
+// defining seasons and calculating seasonal average
+func calculateSeasonalAvg(rawData []RawStationData) []*SeasonalStationData {
+	type Aggr struct {
+		sumMin, countMin int
+		sumMax, countMax int
+	}
+	stats := make(map[string]*Aggr)
+
+	for _, d := range rawData {
+		month := d.Date.Month()
+		year := d.Date.Year()
+		var season string
+
+		switch month {
+		case time.March, time.April, time.May:
+			season = "Spring"
+		case time.June, time.July, time.August:
+			season = "Summer"
+		case time.September, time.October, time.November:
+			season = "Autumn"
+		case time.December:
+			season = "Winter"
+			year = year + 1
+		case time.January, time.February:
+			season = "Winter"
+		default:
+			continue
 		}
-		bDate, err := time.Parse(layout, b.Year+b.Month)
-		if err != nil {
-			return 1
+
+		key := fmt.Sprintf("%d-%s", year, season)
+		if _, ok := stats[key]; !ok {
+			stats[key] = &Aggr{}
 		}
-		return aDate.Compare(bDate)
+		switch d.ElementType {
+		case "TMIN":
+			stats[key].sumMin += d.Value
+			stats[key].countMin++
+		case "TMAX":
+			stats[key].sumMax += d.Value
+			stats[key].countMax++
+		}
+	}
+
+	var result []*SeasonalStationData
+	for key, val := range stats {
+		parts := strings.Split(key, "-")
+		year, _ := strconv.Atoi(parts[0])
+		season := parts[1]
+		sData := &SeasonalStationData{Year: year, Season: season}
+
+		if val.countMin > 0 {
+			avg := (float64(val.sumMin) / float64(val.countMin)) / 10.0
+			avg = math.Round(avg*100) / 100
+			sData.TMin = &avg
+		}
+		if val.countMax > 0 {
+			avg := (float64(val.sumMax) / float64(val.countMax)) / 10.0
+			avg = math.Round(avg*100) / 100
+			sData.TMax = &avg
+		}
+		result = append(result, sData)
+	}
+	slices.SortFunc(result, func(a, b *SeasonalStationData) int {
+		if a.Year != b.Year {
+			return a.Year - b.Year
+		}
+		order := map[string]int{"Winter": 1, "Spring": 2, "Summer": 3, "Autumn": 4}
+		return order[a.Season] - order[b.Season]
 	})
-	return avgTemp
+	return result
 }
 
 func stationHandler(w http.ResponseWriter, r *http.Request) {
+	//cors handling
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 	q := r.URL.Query()
 	id := q.Get("id")
 	enc := json.NewEncoder(w)
@@ -371,15 +502,24 @@ func stationHandler(w http.ResponseWriter, r *http.Request) {
 		enc.Encode(response)
 		return
 	}
-	data, err := loadStationData(id)
+
+	rawData, err := loadStationData(id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		response := Response{Data: nil, ErrorMsg: err.Error()}
 		enc.Encode(response)
 		return
 	}
-	avgData := calculateAvgTemp(data)
-	response := Response{Data: avgData, ErrorMsg: ""}
+
+	annualData := calculateAnnualAvg(rawData)
+	seasonalData := calculateSeasonalAvg(rawData)
+
+	detailData := StationDetailResponse{
+		Annual:   annualData,
+		Seasonal: seasonalData,
+	}
+
+	response := Response{Data: detailData, ErrorMsg: ""}
 	enc.Encode(response)
 }
 
@@ -388,6 +528,11 @@ func main() {
 	if err != nil {
 		// file for rough filtering
 		fmt.Printf("Fehler beim Laden des Inventars: %v\n", err)
+		return
+	}
+	err = initStations()
+	if err != nil {
+		fmt.Printf("Fehler beim Laden der Stationen: %v\n", err)
 		return
 	}
 	http.HandleFunc("/status", statusHandler)

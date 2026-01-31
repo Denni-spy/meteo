@@ -27,29 +27,43 @@
             <form id="meteoForm">
 
                 <div class="input-group">
-                    <label for="latitude">Breitengrad (-90 bis 90):</label>
+                    <label for="latitude">Latitude (-90 to 90):</label>
                     <input type="number" id="latitude" min="-90" max="90" step="any">
                 </div>
 
                 <div class="input-group">
-                    <label for="longitude">Längengrad (-180 bis 180):</label>
+                    <label for="longitude">Longitude (-180 to 180):</label>
                     <input type="number" id="longitude" min="-180" max="180" step="any">
                 </div>
 
                 <div class="input-group">
-                    <label>Radius:</label>
+                    <label>Radius</label>
                     <div class="unit-input">
-                        <input type="number" id="radius"> <span>km</span>
+                        <input type="number" id="radius" step="1">
                     </div>
                 </div>
 
                 <div class="input-group">
-                    <label>Anzahl Stationen:</label>
+                    <label>Selection</label>
                     <div class="unit-input">
-                        <span>Top</span> <input type="number" id="selection">
+                        <input type="number" id="selection">
                     </div>
-                </div>
-                <button type="submit" id="submitBtn">Search</button>
+
+                    <div class="input-group">
+                        <label>Start</label>
+                        <div class="unit-input">
+                            <input type="number" id="start" min="1750" max="2025" step="1" placeholder="YYYY">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>End</label>
+                        <div class="unit-input">
+                            <input type="number" id="end" min="1750" max="2025" step="1" placeholder="YYYY">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn">Search</button>
             </form>
         </div>
     </div>
@@ -57,19 +71,19 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="script.js"></script>
     <svg height="0" width="0" style="position: absolute; visibility: hidden;">
-  <filter id="inner-shadow">
-    <feOffset dx="3" dy="3" />
-    
-    <feGaussianBlur stdDeviation="4" result="offset-blur" />
-    
-    <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
-    
-    <feFlood flood-color="black" flood-opacity="0.8" result="color" />
-    <feComposite operator="in" in="color" in2="inverse" result="shadow" />
-    
-    <feComposite operator="over" in="shadow" in2="SourceGraphic" />
-  </filter>
-</svg>
+        <filter id="inner-shadow">
+            <feOffset dx="3" dy="3" />
+
+            <feGaussianBlur stdDeviation="4" result="offset-blur" />
+
+            <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
+
+            <feFlood flood-color="black" flood-opacity="0.8" result="color" />
+            <feComposite operator="in" in="color" in2="inverse" result="shadow" />
+
+            <feComposite operator="over" in="shadow" in2="SourceGraphic" />
+        </filter>
+    </svg>
 </body>
 
 </html>
