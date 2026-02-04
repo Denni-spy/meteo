@@ -107,8 +107,8 @@ form.addEventListener('submit', function (event) {
                             <b>${station.name}</b><br>
                             ID: ${station.id}<br>
                             Distance: ${Math.round(station.distance)} km
-                        `);
-                    
+                        `)
+                    .on("click", () => window.location.href = `detailview.html?id=${station.id}`);
                     stationMarkers.push(marker);
                 }
             });

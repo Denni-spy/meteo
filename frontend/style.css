@@ -176,3 +176,23 @@ input:checked+.slider:before {
     align-items: center;
     gap: 20px;
 }
+
+#station {
+    width: 100%;
+}
+
+.sun-loader {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 165, 0, 0.2); /* Faint orange ring */
+    border-top: 4px solid #FF8C00; /* Dark orange active part */
+    border-right: 4px solid #FFD700; /* Gold active part */
+    border-radius: 50%;
+    animation: sun-spin 1s linear infinite;
+    box-shadow: 0 0 15px #FFD700; /* Glowing sun effect */
+}
+
+@keyframes sun-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
