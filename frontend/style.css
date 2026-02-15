@@ -6,7 +6,7 @@
     --text-color: #1e293b;
     --card-bg: #D9D9D9;
     --border-color: #e2e8f0;
-    --sidebar-bg: #EEEEEE;
+    --sidebar-bg: #f5f5f5;
     --title-color: #919FC5;
     --line-color: #2756A3;
     --input-bg: #ffffff;
@@ -51,7 +51,7 @@
 body {
     display: flex;
     flex-direction: column;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
@@ -162,10 +162,9 @@ header {
 .field label {
     display: block;
     font-weight: 500;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--label-color);
-    letter-spacing: 0.025em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
 }
 
 input[type="number"] {
@@ -177,6 +176,7 @@ input[type="number"] {
     color: var(--input-text);
     font-size: 0.9rem;
     font-family: inherit;
+    text-align: center;
     outline: none;
 }
 
@@ -190,13 +190,12 @@ input[type="number"]:focus {
     color: white;
     padding: 10px 16px;
     border: none;
-    border-radius: 8px;
+    border-radius: 20px;
     font-weight: 600;
     cursor: pointer;
     font-size: 0.85rem;
     font-family: inherit;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
     transition: background 0.3s ease;
 }
 
@@ -358,10 +357,9 @@ input[type="number"]:focus {
 
 .dark-mode-toggle-wrapper span {
     color: var(--label-color);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 500;
-    letter-spacing: 0.025em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
     white-space: nowrap;
 }
 
