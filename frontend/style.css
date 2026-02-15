@@ -1,14 +1,48 @@
+/* ── CSS Variables ─────────────────────────────────────────────── */
+
 :root {
     --primary-color: #2563eb;
     --bg-color: #f8fafc;
     --text-color: #1e293b;
     --card-bg: #D9D9D9;
     --border-color: #e2e8f0;
-    --form-bg: #EEEEEE;
+    --sidebar-bg: #EEEEEE;
     --title-color: #919FC5;
     --line-color: #2756A3;
+    --input-bg: #ffffff;
+    --input-text: #1e293b;
+    --table-border: #000000;
+    --tmin-color: blue;
+    --tmax-color: red;
+    --tab-active-bg: #b5ccf0;
+    --tab-inactive-bg: #ffffff;
+    --tab-text: #1e293b;
 }
 
+[data-theme="dark"] {
+    --primary-color: #3b82f6;
+    --bg-color: #0f172a;
+    --text-color: #e2e8f0;
+    --card-bg: #1e293b;
+    --border-color: #334155;
+    --sidebar-bg: #283548;
+    --title-color: #7b8db8;
+    --line-color: #3b6fd4;
+    --input-bg: #1e293b;
+    --input-text: #e2e8f0;
+    --table-border: #475569;
+    --tmin-color: #60a5fa;
+    --tmax-color: #f87171;
+    --tab-active-bg: #334d7a;
+    --tab-inactive-bg: #1e293b;
+    --tab-text: #e2e8f0;
+}
+
+/* ── Base / Reset ─────────────────────────────────────────────── */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
 
 body {
     display: flex;
@@ -17,239 +51,417 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
-    padding: 40px;
-    min-width: calc(100vw - 80px);
-    min-height: calc(100vh - 80px);
-    gap: 64px;
+    padding: 24px;
+    min-height: 100vh;
+    max-height: 100vh;
+    max-width: 100vw;
+    overflow: hidden;
+    gap: 32px;
+}
+
+/* ── Smooth theme transitions ─────────────────────────────────── */
+
+body, header, main,
+.map-card, .detail-card, .sidebar,
+input[type="number"], #meteo-table, th, td,
+.title, .title-line, .search-btn, .tab-btn, .back-btn {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ── Header (title + line) ────────────────────────────────────── */
+
+header {
+    flex-shrink: 0;
 }
 
 .title {
     color: var(--title-color);
-    font-size: 128px;
+    font-size: clamp(48px, 10vw, 128px);
     font-weight: bold;
     margin: 0;
+    cursor: pointer;
     filter: url(#inner-shadow);
+    line-height: 1.1;
 }
 
-.line {
-    min-width: 90vw;
+.title-line {
+    width: 100%;
     height: 3px;
     background: var(--line-color);
 }
 
-.layout-wrapper {
+/* ── Cards (shared between map page and detail page) ──────────── */
+
+.map-card,
+.detail-card {
     display: flex;
     flex-wrap: wrap;
-    gap: 30px;
+    gap: 24px;
     background: var(--card-bg);
-    padding: 30px;
-    border-radius: 25px;
-    max-width: 90vw;
-    flex: 1 0 0;
+    padding: 24px;
+    border-radius: 16px;
+    flex: 1 0 auto;
     position: relative;
+    min-width: 0;
 }
 
-.form-wrapper {
-    display: flex;
+.detail-card {
+    flex-wrap: nowrap;
     flex-direction: column;
-    background: var(--form-bg);
-    border-radius: 10px;
-    flex: 1 0 0;
-    max-width: 20%;
+    overflow: hidden;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
-.input-group {
-    margin-bottom: 15px;
-}
-
-label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 5px;
-    font-size: 0.9rem;
-}
-
-input[type="number"] {
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-
-#submitBtn {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s ease;
-}
-
-#submitBtn:hover {
-    background-color: #1d4ed8;
-}
-
+/* ── Map page layout ──────────────────────────────────────────── */
 
 #map {
     border-radius: 8px;
     border: 1px solid var(--border-color);
     min-height: 400px;
-    flex: 1 0 0;
-    max-width: 80%;
+    flex: 1 1 600px;
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    background: var(--sidebar-bg);
+    border-radius: 10px;
+    flex: 0 1 240px;
+    min-width: 200px;
 }
 
 #meteoForm {
-    padding: 20px;
-}
-
-/* The switch - the box around the slider */
-.dark-mode {
-    position: relative;
-    display: inline-block;
-    width: 60px;
-    height: 34px;
-}
-
-/* Hide default HTML checkbox */
-.dark-mode input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-/* The slider */
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    -webkit-transition: .4s;
-    transition: .4s;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 26px;
-    width: 26px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    -webkit-transition: .4s;
-    transition: .4s;
-}
-
-input:checked+.slider {
-    background-color: #2196F3;
-}
-
-input:focus+.slider {
-    box-shadow: 0 0 1px #2196F3;
-}
-
-input:checked+.slider:before {
-    -webkit-transform: translateX(26px);
-    -ms-transform: translateX(26px);
-    transform: translateX(26px);
-}
-
-/* Rounded sliders */
-.slider.round {
-    border-radius: 34px;
-}
-
-.slider.round:before {
-    border-radius: 50%;
-}
-
-.dark-mode-wrapper {
+    padding: 16px;
     display: flex;
-    flex-wrap: wrap;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
+    flex-direction: column;
+    gap: 12px;
 }
 
-#station {
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.field label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+input[type="number"] {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    width: 100%;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    font-size: 0.9rem;
+}
+
+.search-btn {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s ease;
+}
+
+.search-btn:hover {
+    background-color: #1d4ed8;
+}
+
+/* ── Detail page toolbar ──────────────────────────────────────── */
+
+.detail-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     width: 100%;
 }
 
-.sun-loader {
+/* Back button — arrow icon style */
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    font-size: 1.4rem;
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 8px;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+}
+
+.back-btn:hover {
+    background-color: var(--border-color);
+}
+
+/* Tab buttons (Diagram / Table) — centered in toolbar */
+.view-tabs {
+    display: flex;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    padding: 8px 28px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    color: var(--tab-text);
+    background-color: var(--tab-inactive-bg);
+    transition: background-color 0.2s ease;
+}
+
+.tab-btn:not(:last-child) {
+    border-right: 1px solid var(--border-color);
+}
+
+.tab-btn.active {
+    background-color: var(--tab-active-bg);
+}
+
+.tab-btn:hover:not(.active) {
+    background-color: var(--border-color);
+}
+
+/* Station name label */
+.station-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin: 0;
+    color: var(--text-color);
+}
+
+/* ── Chart / Table content area ───────────────────────────────── */
+
+#station {
+    width: 100%;
+    min-width: 0;
+}
+
+#table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    min-width: 0;
+}
+
+#meteo-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#meteo-table th,
+#meteo-table td {
+    background-color: var(--sidebar-bg);
+    border: 1px solid var(--table-border);
+    color: var(--text-color);
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.cell-tmin {
+    color: var(--tmin-color);
+    font-weight: bold;
+}
+
+.cell-tmax {
+    color: var(--tmax-color);
+    font-weight: bold;
+}
+
+.data-wrapper {
+    overflow: auto;
+}
+
+/* ── Loading spinner ──────────────────────────────────────────── */
+
+.spinner {
     width: 50px;
     height: 50px;
     border: 4px solid rgba(255, 165, 0, 0.2);
-    /* Faint orange ring */
     border-top: 4px solid #FF8C00;
-    /* Dark orange active part */
     border-right: 4px solid #FFD700;
-    /* Gold active part */
     border-radius: 50%;
-    animation: sun-spin 1s linear infinite;
+    animation: spin 1s linear infinite;
     box-shadow: 0 0 15px #FFD700;
-    /* Glowing sun effect */
     position: absolute;
     left: calc(50% - 25px);
     top: calc(50% - 25px);
 }
 
-@keyframes sun-spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
+@keyframes spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.controls-wrapper {
+/* ── Dark mode toggle switch ──────────────────────────────────── */
+
+.dark-mode-toggle-wrapper {
     display: flex;
-    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 16px;
 }
 
-.column {
-    flex-direction: column;
+.dark-mode-toggle-wrapper span {
+    color: var(--text-color);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.switch {
     position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
 }
 
-.view-toggles {
-    margin-left: auto;
-    margin-right: auto;
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
-#btn-back {
+.switch-slider {
     position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #ccc;
+    border-radius: 26px;
+    transition: background-color 0.3s;
 }
 
-#meteo-table {
-    width: 100%;
+.switch-slider::before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
 }
 
-#meteo-table,
-th,
-td {
-    background-color: var(--form-bg);
-    border: 1px solid black;
-    border-collapse: collapse;
+.switch input:checked + .switch-slider {
+    background-color: #2196F3;
 }
 
-th,
-td {
-    table-layout: fixed;
+.switch input:checked + .switch-slider::before {
+    transform: translateX(22px);
 }
 
-.active {
-    background-color: green;
-}
+/* ── Utility ──────────────────────────────────────────────────── */
 
 .hidden {
     display: none !important;
+}
+
+/* ── Leaflet dark mode overrides ──────────────────────────────── */
+
+[data-theme="dark"] .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(1.1);
+}
+
+[data-theme="dark"] .leaflet-marker-pane,
+[data-theme="dark"] .leaflet-shadow-pane,
+[data-theme="dark"] .leaflet-popup-pane {
+    filter: none;
+}
+
+[data-theme="dark"] .leaflet-control-zoom a {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .leaflet-control-attribution {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+/* ── Responsive breakpoints ───────────────────────────────────── */
+
+@media (max-width: 768px) {
+    body {
+        padding: 16px;
+        gap: 20px;
+    }
+
+    .map-card,
+    .detail-card {
+        padding: 16px;
+        border-radius: 12px;
+    }
+
+    /* Stack map and sidebar vertically on small screens */
+    .map-card {
+        flex-direction: column;
+    }
+
+    #map {
+        min-height: 300px;
+        flex: 1 1 auto;
+    }
+
+    .sidebar {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    /* Detail toolbar: stack back + tabs on small screens */
+    .detail-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .tab-btn {
+        padding: 8px 18px;
+        font-size: 0.85rem;
+    }
+
+    #meteo-table th,
+    #meteo-table td {
+        font-size: 0.75rem;
+        padding: 4px 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 12px;
+        gap: 16px;
+    }
+
+    .detail-toolbar {
+        gap: 8px;
+    }
+
+    .view-tabs {
+        margin: 0 auto;
+    }
+
+    .dark-mode-toggle-wrapper {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
+    .tab-btn {
+        padding: 6px 14px;
+        font-size: 0.8rem;
+    }
 }

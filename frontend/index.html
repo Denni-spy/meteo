@@ -3,87 +3,78 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meteo Karte</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
+    <script src="dark-mode.js"></script>
 </head>
 
 <body>
-    <div>
+    <header>
         <h1 class="title">MƎTEO</h1>
-        <div class="line"></div>
-    </div>
-    <div class="layout-wrapper">
-        <div id="map"></div>
-        <div class="form-wrapper">
-            <div class="dark-mode-wrapper">
-                <p>Dark mode</p>
-                <label class="dark-mode">
-                    <input type="checkbox">
-                    <span class="slider round"></span>
-                </label>
+        <div class="title-line"></div>
+    </header>
 
+    <main class="map-card">
+        <div id="map"></div>
+        <aside class="sidebar">
+            <div class="dark-mode-toggle-wrapper">
+                <span>Dark mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="dark-mode-toggle">
+                    <span class="switch-slider"></span>
+                </label>
             </div>
             <form id="meteoForm">
-
-                <div class="input-group">
+                <div class="field">
                     <label for="latitude">Latitude (-90 to 90):</label>
                     <input type="number" id="latitude" min="-90" max="90" step="any">
                 </div>
 
-                <div class="input-group">
+                <div class="field">
                     <label for="longitude">Longitude (-180 to 180):</label>
                     <input type="number" id="longitude" min="-180" max="180" step="any">
                 </div>
 
-                <div class="input-group">
-                    <label>Radius</label>
-                    <div class="unit-input">
-                        <input type="number" id="radius" step="1">
-                    </div>
+                <div class="field">
+                    <label for="radius">Radius</label>
+                    <input type="number" id="radius" step="1">
                 </div>
 
-                <div class="input-group">
-                    <label>Selection</label>
-                    <div class="unit-input">
-                        <input type="number" id="selection">
-                    </div>
+                <div class="field">
+                    <label for="selection">Selection</label>
+                    <input type="number" id="selection">
+                </div>
 
-                    <div class="input-group">
-                        <label>Start</label>
-                        <div class="unit-input">
-                            <input type="number" id="start" min="1750" max="2025" step="1" placeholder="YYYY">
-                        </div>
-                    </div>
+                <div class="field">
+                    <label for="start">Start</label>
+                    <input type="number" id="start" min="1750" max="2025" step="1" placeholder="YYYY">
+                </div>
 
-                    <div class="input-group">
-                        <label>End</label>
-                        <div class="unit-input">
-                            <input type="number" id="end" min="1750" max="2025" step="1" placeholder="YYYY">
-                        </div>
-                    </div>
+                <div class="field">
+                    <label for="end">End</label>
+                    <input type="number" id="end" min="1750" max="2025" step="1" placeholder="YYYY">
+                </div>
 
-                    <button type="submit" id="submitBtn">Search</button>
+                <button type="submit" class="search-btn">Search</button>
             </form>
-        </div>
-    </div>
+        </aside>
+    </main>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="script.js"></script>
     <svg height="0" width="0" style="position: absolute; visibility: hidden;">
         <filter id="inner-shadow">
             <feOffset dx="3" dy="3" />
-
             <feGaussianBlur stdDeviation="4" result="offset-blur" />
-
             <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
-
             <feFlood flood-color="black" flood-opacity="0.8" result="color" />
             <feComposite operator="in" in="color" in2="inverse" result="shadow" />
-
             <feComposite operator="over" in="shadow" in2="SourceGraphic" />
         </filter>
     </svg>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
 </body>
 
 </html>

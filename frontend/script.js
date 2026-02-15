@@ -81,7 +81,7 @@ form.addEventListener('submit', function (event) {
 
 
     //fetch data from backend
-    const url = `http://localhost:8080/stations?lat=${lat}&long=${long}&radius=${radKm}&limit=${limit}&start=${start}&end=${end}`;
+    const url = `/api/stations?lat=${lat}&long=${long}&radius=${radKm}&limit=${limit}&start=${start}&end=${end}`;
     console.log("Send request to:", url);
     fetch(url)
         .then(response => response.json())
@@ -108,7 +108,9 @@ form.addEventListener('submit', function (event) {
                             ID: ${station.id}<br>
                             Distance: ${Math.round(station.distance)} km
                         `)
-                        .on("click", () => window.location.href = `detailview.html?id=${station.id}`);
+                        .on("mouseover", function () { this.openPopup(); })
+                        .on("mouseout", function () { this.closePopup(); })
+                        .on("click", () => window.location.href = `detailview.html?id=${station.id}&name=${encodeURIComponent(station.name)}`);
                     stationMarkers.push(marker);
                 }
             });

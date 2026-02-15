@@ -3,69 +3,78 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meteo Station</title>
     <link rel="stylesheet" href="style.css">
+    <script src="dark-mode.js"></script>
 </head>
 
 <body>
-    <div>
-        <h1 class="title" style="cursor: pointer;" onclick="window.location.href='index.html'"">MƎTEO</h1>
-        <div class=" line">
-    </div>
-    </div>
+    <header>
+        <h1 class="title" onclick="window.location.href='index.html'">MƎTEO</h1>
+        <div class="title-line"></div>
+    </header>
 
-
-    <div class="layout-wrapper column">
-        <div class="controls-wrapper">
-            <button id="btn-back" class="nav-btn"><a href="index.html">← Back</a></button>
-            <div class="view-toggles">
-                <button id="btn-chart" class="toggle-btn active">Diagram</button>
-                <button id="btn-table" class="toggle-btn">Table</button>
+    <main class="detail-card">
+        <div class="detail-toolbar">
+            <a href="index.html" class="back-btn" aria-label="Back to map">&#x21A9;</a>
+            <div class="view-tabs">
+                <button id="btn-chart" class="tab-btn active">Diagram</button>
+                <button id="btn-table" class="tab-btn">Table</button>
+            </div>
+            <div class="dark-mode-toggle-wrapper">
+                <span>Dark mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="dark-mode-toggle">
+                    <span class="switch-slider"></span>
+                </label>
             </div>
         </div>
-        <div id="loading-spinner" class="sun-loader"></div>
-        <canvas id="station"></canvas>
-        <div id="table-container" class="view-container hidden">
-            <table id="meteo-table">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>TMIN</th>
-                        <th>TMAX</th>
-                        <th>Winter Min</th>
-                        <th>Winter Max</th>
-                        <th>Spring Min</th>
-                        <th>Spring Max</th>
-                        <th>Summer Min</th>
-                        <th>Summer Max</th>
-                        <th>Autumn Min</th>
-                        <th>Autumn Max</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody">
-                </tbody>
-            </table>
+
+        <p id="station-name" class="station-name"></p>
+
+        <div id="loading-spinner" class="spinner"></div>
+
+        <div class="data-wrapper">
+            <canvas id="station"></canvas>
+            <div id="table-container" class="hidden">
+                <table id="meteo-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>TMIN</th>
+                            <th>TMAX</th>
+                            <th>Winter Min</th>
+                            <th>Winter Max</th>
+                            <th>Spring Min</th>
+                            <th>Spring Max</th>
+                            <th>Summer Min</th>
+                            <th>Summer Max</th>
+                            <th>Autumn Min</th>
+                            <th>Autumn Max</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody">
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-
+    </main>
 
     <svg height="0" width="0" style="position: absolute; visibility: hidden;">
         <filter id="inner-shadow">
             <feOffset dx="3" dy="3" />
-
             <feGaussianBlur stdDeviation="4" result="offset-blur" />
-
             <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
-
             <feFlood flood-color="black" flood-opacity="0.8" result="color" />
             <feComposite operator="in" in="color" in2="inverse" result="shadow" />
-
             <feComposite operator="over" in="shadow" in2="SourceGraphic" />
         </filter>
     </svg>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <script src="station.js"></script>
 </body>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-<script src="station.js"></script>
 
 </html>
