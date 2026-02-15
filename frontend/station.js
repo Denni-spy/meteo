@@ -133,6 +133,8 @@ function draw(data) {
                 ]
             },
             options: {
+                responsive: true,
+                maintainAspectRatio: true,
                 scales: {
                     x: {
                         ticks: { color: colors.text },
