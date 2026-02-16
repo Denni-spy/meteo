@@ -57,10 +57,14 @@ body {
     margin: 0;
     padding: 24px;
     min-height: 100vh;
-    max-height: 100vh;
     max-width: 100vw;
-    overflow: hidden;
     gap: 32px;
+}
+
+/* Detail page: lock to viewport so only the data-wrapper scrolls */
+body:has(.detail-card) {
+    max-height: 100vh;
+    overflow: hidden;
 }
 
 /* ── Smooth theme transitions ─────────────────────────────────── */
