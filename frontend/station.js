@@ -14,6 +14,8 @@ if (nameEl && stationName) {
 
 let chartInstance = null;
 let cachedAnnualData = null;
+let cachedSeasonalData = null;
+let showSeasons = false;
 
 function getChartColors() {
     const style = getComputedStyle(document.documentElement);
@@ -109,7 +111,8 @@ fetch(url)
         const seasonalData = filterByYearRange(seasonalDataFull, startYear, endYear);
 
         cachedAnnualData = annualData;
-        draw(annualData);
+        cachedSeasonalData = seasonalData;
+        draw(annualData, seasonalData, showSeasons);
         fillTable(seasonalData, annualData);
     })
     .catch(error => {
@@ -118,11 +121,76 @@ fetch(url)
         alert("Connection to server failed. Is 'main.go' running?");
     });
 
-function draw(data) {
+function draw(annualData, seasonalData, withSeasons) {
     const colors = getChartColors();
 
     if (chartInstance) {
         chartInstance.destroy();
+    }
+
+    const datasets = [];
+
+    // Only show annual lines when seasons are off
+    if (!withSeasons) {
+        datasets.push(
+            {
+                label: 'Tmin (annual)',
+                data: annualData.map(row => row.tmin),
+                borderColor: colors.tmin,
+                backgroundColor: colors.tmin,
+                spanGaps: false,
+                borderWidth: 2,
+            },
+            {
+                label: 'Tmax (annual)',
+                data: annualData.map(row => row.tmax),
+                borderColor: colors.tmax,
+                backgroundColor: colors.tmax,
+                spanGaps: false,
+                borderWidth: 2,
+            }
+        );
+    }
+
+    if (withSeasons && seasonalData) {
+        // Build a map: year -> { season -> { tmin, tmax } }
+        const seasonMap = new Map();
+        for (const row of seasonalData) {
+            if (!seasonMap.has(row.year)) seasonMap.set(row.year, {});
+            seasonMap.get(row.year)[row.season] = row;
+        }
+
+        const seasonDefs = [
+            { season: 'Winter', minColor: '#6bb7e0', maxColor: '#e07c6b' },
+            { season: 'Spring', minColor: '#4caf50', maxColor: '#ff9800' },
+            { season: 'Summer', minColor: '#00bcd4', maxColor: '#e91e63' },
+            { season: 'Autumn', minColor: '#9c7ae6', maxColor: '#c77a28' },
+        ];
+
+        for (const def of seasonDefs) {
+            datasets.push({
+                label: `${def.season} Tmin`,
+                data: annualData.map(row => {
+                    const s = seasonMap.get(row.year);
+                    return s && s[def.season] ? s[def.season].tmin : null;
+                }),
+                borderColor: def.minColor,
+                backgroundColor: def.minColor,
+                spanGaps: false,
+                borderWidth: 1.5,
+            });
+            datasets.push({
+                label: `${def.season} Tmax`,
+                data: annualData.map(row => {
+                    const s = seasonMap.get(row.year);
+                    return s && s[def.season] ? s[def.season].tmax : null;
+                }),
+                borderColor: def.maxColor,
+                backgroundColor: def.maxColor,
+                spanGaps: false,
+                borderWidth: 1.5,
+            });
+        }
     }
 
     chartInstance = new Chart(
@@ -130,23 +198,8 @@ function draw(data) {
         {
             type: 'line',
             data: {
-                labels: data.map(row => row.year),
-                datasets: [
-                    {
-                        label: 'tmin per year',
-                        data: data.map(row => row.tmin),
-                        borderColor: colors.tmin,
-                        backgroundColor: colors.tmin,
-                        spanGaps: false,
-                    },
-                    {
-                        label: 'tmax per year',
-                        data: data.map(row => row.tmax),
-                        borderColor: colors.tmax,
-                        backgroundColor: colors.tmax,
-                        spanGaps: false,
-                    }
-                ]
+                labels: annualData.map(row => row.year),
+                datasets: datasets
             },
             options: {
                 responsive: true,
@@ -163,6 +216,7 @@ function draw(data) {
                 },
                 plugins: {
                     legend: {
+                        display: true,
                         labels: { color: colors.text }
                     }
                 }
@@ -239,13 +293,14 @@ function fillTable(seasonalData, annualData) {
 
 const diagramBtn = document.getElementById("btn-chart");
 const tableBtn = document.getElementById("btn-table");
+const seasonsWrapper = document.getElementById('seasons-toggle')?.closest('.dark-mode-toggle-wrapper');
 
 diagramBtn.addEventListener("click", () => {
     diagramBtn.classList.add("active")
     tableBtn.classList.remove("active")
     document.getElementById("station").classList.remove("hidden")
     document.getElementById("table-container").classList.add("hidden")
-
+    if (seasonsWrapper) seasonsWrapper.classList.remove("hidden");
 })
 
 tableBtn.addEventListener("click", () => {
@@ -253,7 +308,7 @@ tableBtn.addEventListener("click", () => {
     diagramBtn.classList.remove("active")
     document.getElementById("station").classList.add("hidden")
     document.getElementById("table-container").classList.remove("hidden")
-
+    if (seasonsWrapper) seasonsWrapper.classList.add("hidden");
 })
 
 // Redraw chart when dark mode changes
@@ -261,8 +316,18 @@ const darkToggle = document.getElementById('dark-mode-toggle');
 if (darkToggle) {
     darkToggle.addEventListener('change', function () {
         if (cachedAnnualData) {
-            // Small delay to let CSS variables update
-            setTimeout(() => draw(cachedAnnualData), 50);
+            setTimeout(() => draw(cachedAnnualData, cachedSeasonalData, showSeasons), 50);
+        }
+    });
+}
+
+// Toggle seasonal data lines on the chart
+const seasonsToggle = document.getElementById('seasons-toggle');
+if (seasonsToggle) {
+    seasonsToggle.addEventListener('change', function () {
+        showSeasons = seasonsToggle.checked;
+        if (cachedAnnualData) {
+            draw(cachedAnnualData, cachedSeasonalData, showSeasons);
         }
     });
 }

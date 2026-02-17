@@ -215,10 +215,18 @@ input[type="number"]:focus {
 /* ── Detail page toolbar ──────────────────────────────────────── */
 
 .detail-toolbar {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 16px;
     width: 100%;
+}
+
+.detail-toolbar .toolbar-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 /* Back button — arrow icon style */
@@ -232,7 +240,7 @@ input[type="number"]:focus {
     color: var(--text-color);
     text-decoration: none;
     border-radius: 8px;
-    flex-shrink: 0;
+    justify-self: start;
     transition: background-color 0.2s;
 }
 
@@ -243,7 +251,6 @@ input[type="number"]:focus {
 /* Tab buttons (Diagram / Table) — centered in toolbar */
 .view-tabs {
     display: flex;
-    margin: 0 auto;
     border-radius: 8px;
     overflow: hidden;
     border: 1px solid var(--border-color);
@@ -473,9 +480,9 @@ input[type="number"]:focus {
         min-width: 0;
     }
 
-    /* Detail toolbar: stack back + tabs on small screens */
+    /* Detail toolbar: single row on small screens */
     .detail-toolbar {
-        flex-wrap: wrap;
+        gap: 8px;
     }
 
     .tab-btn {
@@ -498,10 +505,6 @@ input[type="number"]:focus {
 
     .detail-toolbar {
         gap: 8px;
-    }
-
-    .view-tabs {
-        margin: 0 auto;
     }
 
     .dark-mode-toggle-wrapper {
