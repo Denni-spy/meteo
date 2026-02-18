@@ -550,12 +550,12 @@ func TestStationsHandler_MissingParams(t *testing.T) {
 		query    string
 		errorMsg string
 	}{
-		{"missing lat", "?long=13&radius=100&limit=10&start=1950&end=2020", "Breitengrad"},
-		{"missing long", "?lat=52&radius=100&limit=10&start=1950&end=2020", "Längengrad"},
-		{"missing radius", "?lat=52&long=13&limit=10&start=1950&end=2020", "Radius"},
-		{"missing limit", "?lat=52&long=13&radius=100&start=1950&end=2020", "Limit"},
-		{"missing start", "?lat=52&long=13&radius=100&limit=10&end=2020", "Anfangsjahr"},
-		{"missing end", "?lat=52&long=13&radius=100&limit=10&start=1950", "Endjahr"},
+		{"missing lat", "?long=13&radius=100&limit=10&start=1950&end=2020", "latitude"},
+		{"missing long", "?lat=52&radius=100&limit=10&start=1950&end=2020", "longitude"},
+		{"missing radius", "?lat=52&long=13&limit=10&start=1950&end=2020", "radius"},
+		{"missing limit", "?lat=52&long=13&radius=100&start=1950&end=2020", "limit"},
+		{"missing start", "?lat=52&long=13&radius=100&limit=10&end=2020", "start year"},
+		{"missing end", "?lat=52&long=13&radius=100&limit=10&start=1950", "end year"},
 	}
 
 	for _, tc := range tests {

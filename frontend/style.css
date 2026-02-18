@@ -318,6 +318,10 @@ input[type="number"]:focus {
     white-space: nowrap;
 }
 
+#meteo-table th {
+    font-weight: 600;
+}
+
 .cell-tmin {
     color: var(--tmin-color);
     font-weight: bold;

@@ -313,79 +313,79 @@ func stationsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if latStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie den Breitengrad an."}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a latitude."}
 		enc.Encode(response)
 		return
 	}
 	if longStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie den Längengrad an."}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a longitude."}
 		enc.Encode(response)
 		return
 	}
 	if radiusStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie den Radius an."}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a radius."}
 		enc.Encode(response)
 		return
 	}
 	if limitStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie das Limit an."}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a selection limit."}
 		enc.Encode(response)
 		return
 	}
 	if startDateStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie das Anfangsjahr an."}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a start year."}
 		enc.Encode(response)
 		return
 	}
 	if endDateStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie das Endjahr an."}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide an end year."}
 		enc.Encode(response)
 		return
 	}
 	lat, err := strconv.ParseFloat(latStr, 32)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie eine gültige Zahl an"}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a valid number."}
 		enc.Encode(response)
 		return
 	}
 	long, err := strconv.ParseFloat(longStr, 32)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie eine gültige Zahl an"}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a valid number."}
 		enc.Encode(response)
 		return
 	}
 	radius, err := strconv.Atoi(radiusStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie eine gültige Zahl an"}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a valid number."}
 		enc.Encode(response)
 		return
 	}
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie eine gültige Zahl an"}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a valid number."}
 		enc.Encode(response)
 		return
 	}
 	start, err := strconv.Atoi(startDateStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie eine gültige Zahl an"}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a valid number."}
 		enc.Encode(response)
 		return
 	}
 	end, err := strconv.Atoi(endDateStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: []*Station{}, ErrorMsg: "Bitte geben Sie eine gültige Zahl an"}
+		response := Response{Data: []*Station{}, ErrorMsg: "Please provide a valid number."}
 		enc.Encode(response)
 		return
 	}
@@ -584,7 +584,7 @@ func stationHandler(w http.ResponseWriter, r *http.Request) {
 
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		response := Response{Data: nil, ErrorMsg: "Geben Sie die richtige ID an"}
+		response := Response{Data: nil, ErrorMsg: "Please provide a valid station ID."}
 		enc.Encode(response)
 		return
 	}

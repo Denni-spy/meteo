@@ -9,7 +9,7 @@ const spinner = document.getElementById('loading-spinner');
 // Display station name if provided
 const nameEl = document.getElementById('station-name');
 if (nameEl && stationName) {
-    nameEl.textContent = `Stationname: ${stationName}`;
+    nameEl.textContent = `Station: ${stationName}`;
 }
 
 let chartInstance = null;
