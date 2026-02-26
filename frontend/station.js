@@ -208,10 +208,20 @@ function draw(annualData, seasonalData, withSeasons) {
                     x: {
                         ticks: { color: colors.text },
                         grid: { color: colors.grid },
+                        title: {
+                            display: true,
+                            text: 'Year',
+                            color: colors.text,
+                        },
                     },
                     y: {
                         ticks: { color: colors.text },
                         grid: { color: colors.grid },
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)',
+                            color: colors.text,
+                        },
                     }
                 },
                 plugins: {
