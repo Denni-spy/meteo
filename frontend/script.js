@@ -29,7 +29,7 @@ function runSearch() {
 
     //validating user input
     if (isNaN(lat) || isNaN(long) || !radiusRaw || !selectionRaw || !startRaw || !endRaw) {
-        alert("Please fill in all fields (latitude, longitude, radius, limit, start, end).");
+        alert("Please fill in all fields (latitude, longitude, radius, selection, start, end).");
         return;
     }
 
