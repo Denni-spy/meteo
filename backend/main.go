@@ -51,7 +51,7 @@ type Station struct {
 	Name      string   `json:"name,omitempty"`
 	Latitude  *float64 `json:"latitude,omitempty"`
 	Longitude *float64 `json:"longitude,omitempty"`
-	Distance  float64  `json:"distance,omitempty"`
+	Distance  float64  `json:"distance"`
 }
 
 type StationInventory struct {
@@ -267,6 +267,11 @@ func countStationsInRadius(latUsr float64, longUsr float64, radius int) int {
 
 	for _, s := range allStations {
 		if s.Latitude == nil || s.Longitude == nil {
+			continue
+		}
+
+		// only count stations that have TMIN/TMAX data in the inventory
+		if _, exists := inventoryMap[s.ID]; !exists {
 			continue
 		}
 

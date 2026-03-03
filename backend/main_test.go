@@ -1547,7 +1547,11 @@ func TestCountStationsInRadius_StationsNearby(t *testing.T) {
 			{ID: "STN002", Name: "Berlin 2", Latitude: &lat2, Longitude: &long2},
 			{ID: "STN003", Name: "Far Away", Latitude: &lat3, Longitude: &long3},
 		},
-		map[string]*StationInventory{},
+		map[string]*StationInventory{
+			"STN001": {FirstYear: 1950, LastYear: 2020},
+			"STN002": {FirstYear: 1950, LastYear: 2020},
+			"STN003": {FirstYear: 1950, LastYear: 2020},
+		},
 	)
 
 	count := countStationsInRadius(52.52, 13.405, 50)

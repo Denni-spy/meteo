@@ -21,16 +21,38 @@ function runSearch() {
     //reading user input
     const lat = parseFloat(document.getElementById('latitude').value);
     const long = parseFloat(document.getElementById('longitude').value);
-    const radKm = parseInt(document.getElementById('radius').value);
-    const limit = parseInt(document.getElementById('selection').value);
-    const start = parseInt(document.getElementById('start').value);
-    const end = parseInt(document.getElementById('end').value);
+    const radiusRaw = document.getElementById('radius').value.trim();
+    const selectionRaw = document.getElementById('selection').value.trim();
+    const startRaw = document.getElementById('start').value.trim();
+    const endRaw = document.getElementById('end').value.trim();
 
     //validating user input
-    if (isNaN(lat) || isNaN(long) || isNaN(radKm) || isNaN(start) || isNaN(end) || isNaN(limit)) {
+    if (isNaN(lat) || isNaN(long) || !radiusRaw || !selectionRaw || !startRaw || !endRaw) {
         alert("Please fill in all fields (latitude, longitude, radius, limit, start, end).");
         return;
     }
+
+    if (!Number.isInteger(Number(radiusRaw))) {
+        alert("Radius must be a whole number.");
+        return;
+    }
+    if (!Number.isInteger(Number(selectionRaw))) {
+        alert("Selection must be a whole number.");
+        return;
+    }
+    if (!Number.isInteger(Number(startRaw))) {
+        alert("Start year must be a whole number.");
+        return;
+    }
+    if (!Number.isInteger(Number(endRaw))) {
+        alert("End year must be a whole number.");
+        return;
+    }
+
+    const radKm = Number(radiusRaw);
+    const limit = Number(selectionRaw);
+    const start = Number(startRaw);
+    const end = Number(endRaw);
 
     if (lat < -90 || lat > 90) {
         alert("Latitude must be between -90 and 90 degrees.");
@@ -119,7 +141,7 @@ function runSearch() {
             }
 
             stationen.forEach(station => {
-                if (station.latitude && station.longitude) {
+                if (station.latitude != null && station.longitude != null) {
 
                     const marker = L.marker([station.latitude, station.longitude])
                         .addTo(map)
