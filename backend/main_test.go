@@ -246,16 +246,16 @@ func TestCalculateSeasonalAvg_SortOrder(t *testing.T) {
 func TestCalculateSeasonalAvg_MultipleYears_SortedByYearThenSeason(t *testing.T) {
 	raw := []RawStationData{
 		{Date: time.Date(2021, 7, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100}, // Summer 2021
-		{Date: time.Date(2020, 1, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100}, // Winter 2020
+		{Date: time.Date(2020, 1, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100}, // Winter 2019 (Jan shifts year--)
 		{Date: time.Date(2020, 7, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100}, // Summer 2020
 	}
 	result := calculateSeasonalAvg(raw, false)
 	if len(result) != 3 {
 		t.Fatalf("expected 3 results, got %d", len(result))
 	}
-	// Expected: Winter 2020, Summer 2020, Summer 2021
-	if result[0].Year != 2020 || result[0].Season != "Winter" {
-		t.Errorf("pos 0: expected 2020 Winter, got %d %s", result[0].Year, result[0].Season)
+	// Expected: Winter 2019, Summer 2020, Summer 2021
+	if result[0].Year != 2019 || result[0].Season != "Winter" {
+		t.Errorf("pos 0: expected 2019 Winter, got %d %s", result[0].Year, result[0].Season)
 	}
 	if result[1].Year != 2020 || result[1].Season != "Summer" {
 		t.Errorf("pos 1: expected 2020 Summer, got %d %s", result[1].Year, result[1].Season)
@@ -1348,7 +1348,7 @@ func TestCalculateSeasonalAvg_DecemberIsWinter(t *testing.T) {
 	if result[0].Season != "Winter" {
 		t.Errorf("expected December to be Winter, got %s", result[0].Season)
 	}
-	// December 2020 should be attributed to year 2020 (current code behavior)
+	// December 2020 should be attributed to year 2020 (winter is labeled by Dec's year)
 	if result[0].Year != 2020 {
 		t.Errorf("expected year 2020, got %d", result[0].Year)
 	}
@@ -1402,6 +1402,7 @@ func TestCalculateSeasonalAvg_SouthernHemisphere_DecemberIsSummer(t *testing.T) 
 	if result[0].Season != "Summer" {
 		t.Errorf("expected December to be Summer in southern hemisphere, got %s", result[0].Season)
 	}
+	// December 2020 should be attributed to year 2020 (summer is labeled by Dec's year)
 	if result[0].Year != 2020 {
 		t.Errorf("expected year 2020, got %d", result[0].Year)
 	}
@@ -1428,10 +1429,10 @@ func TestCalculateSeasonalAvg_SouthernHemisphere_JulyIsWinter(t *testing.T) {
 
 func TestCalculateSeasonalAvg_SouthernHemisphere_SortOrder(t *testing.T) {
 	raw := []RawStationData{
-		{Date: time.Date(2020, 10, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100}, // Spring (SH)
-		{Date: time.Date(2020, 7, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100},  // Winter (SH)
-		{Date: time.Date(2020, 1, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100},  // Summer (SH)
-		{Date: time.Date(2020, 4, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100},  // Autumn (SH)
+		{Date: time.Date(2020, 10, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100}, // Spring 2020 (SH)
+		{Date: time.Date(2020, 7, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100},  // Winter 2020 (SH)
+		{Date: time.Date(2020, 12, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100}, // Summer 2020 (SH, Dec stays)
+		{Date: time.Date(2020, 4, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100},  // Autumn 2020 (SH)
 	}
 	result := calculateSeasonalAvg(raw, true)
 	if len(result) != 4 {
@@ -1462,6 +1463,234 @@ func TestIsSouthernHemisphere(t *testing.T) {
 		if result != tc.expected {
 			t.Errorf("lat %.2f: expected %v, got %v", tc.lat, tc.expected, result)
 		}
+	}
+}
+
+// ─── Annual Average (Monthly Means Method) Tests ──────────────────────────────
+
+func TestCalculateAnnualAvg_MonthlyMeansMethod(t *testing.T) {
+	// Two months with different number of data points.
+	// Jan: 10 data points all value 100 -> monthly mean = 100
+	// Jul: 1 data point value 200 -> monthly mean = 200
+	// Annual mean should be average of monthly means: (100+200)/2 = 150 -> /10 = 15.0
+	// (NOT weighted by count: (10*100+200)/11 = 1200/11 = 109.09 -> /10 = 10.9)
+	var raw []RawStationData
+	for day := 1; day <= 10; day++ {
+		raw = append(raw, RawStationData{
+			Date: time.Date(2020, 1, day, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 100,
+		})
+	}
+	raw = append(raw, RawStationData{
+		Date: time.Date(2020, 7, 1, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 200,
+	})
+
+	result := calculateAnnualAvg(raw)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 year, got %d", len(result))
+	}
+	// Monthly means: Jan=100/10=10.0, Jul=200/10=20.0 ... wait, values are raw
+	// Jan monthly mean = 100 (sum of 10*100 / 10) = 100
+	// Jul monthly mean = 200
+	// Annual mean = (100 + 200) / 2 = 150 -> /10 = 15.0
+	if !approxEqual(*result[0].TMin, 15.0, 0.01) {
+		t.Errorf("expected TMin ~15.0 (monthly means method), got %f", *result[0].TMin)
+	}
+}
+
+func TestCalculateAnnualAvg_MonthlyMeansMethod_UnequalWeight(t *testing.T) {
+	// Demonstrate that months get equal weight regardless of data count.
+	// Jan has 31 values of 0, Feb has 1 value of 310
+	// Old method: (31*0 + 310) / 32 = 9.6875 -> /10 = 0.97
+	// New method: monthly means = (0, 310) -> average = 155 -> /10 = 15.5
+	var raw []RawStationData
+	for day := 1; day <= 31; day++ {
+		raw = append(raw, RawStationData{
+			Date: time.Date(2020, 1, day, 0, 0, 0, 0, time.UTC), ElementType: "TMAX", Value: 0,
+		})
+	}
+	raw = append(raw, RawStationData{
+		Date: time.Date(2020, 2, 1, 0, 0, 0, 0, time.UTC), ElementType: "TMAX", Value: 310,
+	})
+
+	result := calculateAnnualAvg(raw)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 year, got %d", len(result))
+	}
+	// Monthly means: Jan=0, Feb=310 -> annual mean = 155 -> /10 = 15.5
+	if !approxEqual(*result[0].TMax, 15.5, 0.01) {
+		t.Errorf("expected TMax ~15.5 (monthly means method), got %f", *result[0].TMax)
+	}
+}
+
+func TestCalculateAnnualAvg_AllTwelveMonths(t *testing.T) {
+	// One data point per month, each with a different value
+	// Monthly means: 10, 20, 30, ..., 120
+	// Annual mean = (10+20+30+...+120)/12 = 780/12 = 65 -> /10 = 6.5
+	var raw []RawStationData
+	for m := 1; m <= 12; m++ {
+		raw = append(raw, RawStationData{
+			Date:        time.Date(2020, time.Month(m), 15, 0, 0, 0, 0, time.UTC),
+			ElementType: "TMIN",
+			Value:       m * 10,
+		})
+	}
+
+	result := calculateAnnualAvg(raw)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 year, got %d", len(result))
+	}
+	if !approxEqual(*result[0].TMin, 6.5, 0.01) {
+		t.Errorf("expected TMin ~6.5, got %f", *result[0].TMin)
+	}
+}
+
+// ─── Winter/Summer Season Year Attribution Tests ──────────────────────────────
+
+func TestCalculateSeasonalAvg_DecemberBelongsToNextYearsWinter(t *testing.T) {
+	// Dec 2020 + Jan 2021 + Feb 2021 should all be in Winter 2020
+	// (winter is labeled by December's year; Jan/Feb shift year--)
+	raw := []RawStationData{
+		{Date: time.Date(2020, 12, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -100},
+		{Date: time.Date(2021, 1, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -50},
+		{Date: time.Date(2021, 2, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 0},
+	}
+	result := calculateSeasonalAvg(raw, false)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 result (all in Winter 2020), got %d", len(result))
+	}
+	if result[0].Year != 2020 {
+		t.Errorf("expected year 2020, got %d", result[0].Year)
+	}
+	if result[0].Season != "Winter" {
+		t.Errorf("expected Winter, got %s", result[0].Season)
+	}
+	// avg = (-100 + -50 + 0) / 3 = -50 -> /10 = -5.0
+	if !approxEqual(*result[0].TMin, -5.0, 0.01) {
+		t.Errorf("expected TMin ~-5.0, got %f", *result[0].TMin)
+	}
+}
+
+func TestCalculateSeasonalAvg_JanFebWithoutDecStillCountsAsWinter(t *testing.T) {
+	// Only Jan + Feb 1955 data, no Dec 1954 -> should be Winter 1954
+	// (Jan/Feb shift year--, so they land on 1954)
+	raw := []RawStationData{
+		{Date: time.Date(1955, 1, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -200},
+		{Date: time.Date(1955, 2, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -100},
+	}
+	result := calculateSeasonalAvg(raw, false)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(result))
+	}
+	if result[0].Year != 1954 {
+		t.Errorf("expected year 1954, got %d", result[0].Year)
+	}
+	if result[0].Season != "Winter" {
+		t.Errorf("expected Winter, got %s", result[0].Season)
+	}
+	// avg = (-200 + -100) / 2 = -150 -> /10 = -15.0
+	if !approxEqual(*result[0].TMin, -15.0, 0.01) {
+		t.Errorf("expected TMin ~-15.0, got %f", *result[0].TMin)
+	}
+}
+
+func TestCalculateSeasonalAvg_SouthernHemisphere_DecemberBelongsToNextYearsSummer(t *testing.T) {
+	// Dec 2020 + Jan 2021 + Feb 2021 should all be in Summer 2020 (southern hemisphere)
+	// (summer is labeled by December's year; Jan/Feb shift year--)
+	raw := []RawStationData{
+		{Date: time.Date(2020, 12, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 300},
+		{Date: time.Date(2021, 1, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 350},
+		{Date: time.Date(2021, 2, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 280},
+	}
+	result := calculateSeasonalAvg(raw, true)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 result (all in Summer 2020), got %d", len(result))
+	}
+	if result[0].Year != 2020 {
+		t.Errorf("expected year 2020, got %d", result[0].Year)
+	}
+	if result[0].Season != "Summer" {
+		t.Errorf("expected Summer, got %s", result[0].Season)
+	}
+	// avg = (300 + 350 + 280) / 3 = 310 -> /10 = 31.0
+	if !approxEqual(*result[0].TMin, 31.0, 0.01) {
+		t.Errorf("expected TMin ~31.0, got %f", *result[0].TMin)
+	}
+}
+
+func TestCalculateSeasonalAvg_SouthernHemisphere_JanFebWithoutDecStillCountsAsSummer(t *testing.T) {
+	// Only Jan + Feb 1955 data, no Dec 1954 -> should be Summer 1954
+	// (Jan/Feb shift year--, so they land on 1954)
+	raw := []RawStationData{
+		{Date: time.Date(1955, 1, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 250},
+		{Date: time.Date(1955, 2, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 300},
+	}
+	result := calculateSeasonalAvg(raw, true)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(result))
+	}
+	if result[0].Year != 1954 {
+		t.Errorf("expected year 1954, got %d", result[0].Year)
+	}
+	if result[0].Season != "Summer" {
+		t.Errorf("expected Summer, got %s", result[0].Season)
+	}
+}
+
+func TestCalculateSeasonalAvg_ConsecutiveWinters(t *testing.T) {
+	// Dec 2019 + Jan 2020 + Feb 2020 -> Winter 2019
+	// Dec 2020 + Jan 2021 + Feb 2021 -> Winter 2020
+	raw := []RawStationData{
+		{Date: time.Date(2019, 12, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -100},
+		{Date: time.Date(2020, 1, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -80},
+		{Date: time.Date(2020, 2, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -60},
+		{Date: time.Date(2020, 12, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -120},
+		{Date: time.Date(2021, 1, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -90},
+		{Date: time.Date(2021, 2, 15, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: -70},
+	}
+	result := calculateSeasonalAvg(raw, false)
+	if len(result) != 2 {
+		t.Fatalf("expected 2 results (Winter 2019, Winter 2020), got %d", len(result))
+	}
+	// Winter 2019: Dec 2019 (-100) + Jan 2020 (-80) + Feb 2020 (-60) = -240/3 = -80 -> /10 = -8.0
+	if result[0].Year != 2019 || result[0].Season != "Winter" {
+		t.Errorf("pos 0: expected 2019 Winter, got %d %s", result[0].Year, result[0].Season)
+	}
+	if !approxEqual(*result[0].TMin, -8.0, 0.01) {
+		t.Errorf("Winter 2019: expected TMin ~-8.0, got %f", *result[0].TMin)
+	}
+	// Winter 2020: Dec 2020 (-120) + Jan 2021 (-90) + Feb 2021 (-70) = -280/3 = -93.33 -> /10 = -9.3
+	if result[1].Year != 2020 || result[1].Season != "Winter" {
+		t.Errorf("pos 1: expected 2020 Winter, got %d %s", result[1].Year, result[1].Season)
+	}
+	if !approxEqual(*result[1].TMin, -9.3, 0.1) {
+		t.Errorf("Winter 2020: expected TMin ~-9.3, got %f", *result[1].TMin)
+	}
+}
+
+func TestCalculateSeasonalAvg_MonthlyMeansMethod(t *testing.T) {
+	// Summer 2020: June has 30 values of 200, July has 1 value of 350.
+	// Flat daily avg would be: (30*200 + 350) / 31 = 6350/31 = 204.84 -> /10 = 20.5
+	// Monthly means method: Jun mean = 200, Jul mean = 350 -> (200+350)/2 = 275 -> /10 = 27.5
+	var raw []RawStationData
+	for day := 1; day <= 30; day++ {
+		raw = append(raw, RawStationData{
+			Date: time.Date(2020, 6, day, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 200,
+		})
+	}
+	raw = append(raw, RawStationData{
+		Date: time.Date(2020, 7, 1, 0, 0, 0, 0, time.UTC), ElementType: "TMIN", Value: 350,
+	})
+
+	result := calculateSeasonalAvg(raw, false)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(result))
+	}
+	if result[0].Season != "Summer" {
+		t.Errorf("expected Summer, got %s", result[0].Season)
+	}
+	// Monthly means: Jun=200, Jul=350 -> avg=275 -> /10=27.5
+	if !approxEqual(*result[0].TMin, 27.5, 0.01) {
+		t.Errorf("expected TMin ~27.5 (monthly means method), got %f", *result[0].TMin)
 	}
 }
 

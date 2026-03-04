@@ -468,40 +468,70 @@ func loadStationData(baseURL string, id string) ([]RawStationData, error) {
 }
 
 // calculating yearly average for tmin and tmax
+// The annual mean is calculated as the average of the monthly means
+// (Jahresmitteltemperatur from Monatsmitteltemperaturen), so that each month
+// contributes equally regardless of how many daily observations it contains.
 func calculateAnnualAvg(rawData []RawStationData) []*AnnualStationData {
-	type Aggr struct {
+	type MonthAggr struct {
 		sumMin, countMin int
 		sumMax, countMax int
 	}
-	stats := make(map[int]*Aggr)
+	// year -> month -> aggregation of daily values
+	monthly := make(map[int]map[time.Month]*MonthAggr)
 
 	for _, d := range rawData {
 		year := d.Date.Year()
-		if _, ok := stats[year]; !ok {
-			stats[year] = &Aggr{}
+		month := d.Date.Month()
+		if _, ok := monthly[year]; !ok {
+			monthly[year] = make(map[time.Month]*MonthAggr)
+		}
+		if _, ok := monthly[year][month]; !ok {
+			monthly[year][month] = &MonthAggr{}
 		}
 		switch d.ElementType {
 		case "TMIN":
-			stats[year].sumMin += d.Value
-			stats[year].countMin++
+			monthly[year][month].sumMin += d.Value
+			monthly[year][month].countMin++
 		case "TMAX":
-			stats[year].sumMax += d.Value
-			stats[year].countMax++
+			monthly[year][month].sumMax += d.Value
+			monthly[year][month].countMax++
 		}
 	}
+
 	var result []*AnnualStationData
-	for year, val := range stats {
+	for year, months := range monthly {
 		sData := &AnnualStationData{Year: year}
-		if val.countMin > 0 {
-			avg := (float64(val.sumMin) / float64(val.countMin)) / 10
+
+		// compute average of monthly means for TMIN
+		var sumMonthlyMin float64
+		var countMonthlyMin int
+		for _, m := range months {
+			if m.countMin > 0 {
+				sumMonthlyMin += float64(m.sumMin) / float64(m.countMin)
+				countMonthlyMin++
+			}
+		}
+		if countMonthlyMin > 0 {
+			avg := (sumMonthlyMin / float64(countMonthlyMin)) / 10
 			avg = math.Round(avg*10) / 10
 			sData.TMin = &avg
 		}
-		if val.countMax > 0 {
-			avg := (float64(val.sumMax) / float64(val.countMax)) / 10
+
+		// compute average of monthly means for TMAX
+		var sumMonthlyMax float64
+		var countMonthlyMax int
+		for _, m := range months {
+			if m.countMax > 0 {
+				sumMonthlyMax += float64(m.sumMax) / float64(m.countMax)
+				countMonthlyMax++
+			}
+		}
+		if countMonthlyMax > 0 {
+			avg := (sumMonthlyMax / float64(countMonthlyMax)) / 10
 			avg = math.Round(avg*10) / 10
 			sData.TMax = &avg
 		}
+
 		result = append(result, sData)
 	}
 	slices.SortFunc(result, func(a, b *AnnualStationData) int { return a.Year - b.Year })
@@ -524,12 +554,16 @@ func isSouthernHemisphere(lat float64) bool {
 }
 
 // defining seasons and calculating seasonal average
+// The seasonal mean is calculated as the average of the monthly means for the
+// months in that season, so that each month contributes equally regardless of
+// how many daily observations it contains (consistent with the annual method).
 func calculateSeasonalAvg(rawData []RawStationData, southernHemisphere bool) []*SeasonalStationData {
-	type Aggr struct {
+	type MonthAggr struct {
 		sumMin, countMin int
 		sumMax, countMax int
 	}
-	stats := make(map[string]*Aggr)
+	// season key (e.g. "2020-Winter") -> month -> daily aggregation
+	monthly := make(map[string]map[time.Month]*MonthAggr)
 
 	for _, d := range rawData {
 		month := d.Date.Month()
@@ -544,8 +578,11 @@ func calculateSeasonalAvg(rawData []RawStationData, southernHemisphere bool) []*
 				season = "Winter"
 			case time.September, time.October, time.November:
 				season = "Spring"
-			case time.January, time.February, time.December:
+			case time.December:
 				season = "Summer"
+			case time.January, time.February:
+				season = "Summer"
+				year-- // Jan/Feb belong to previous year's summer (with Dec)
 			}
 		} else {
 			switch month {
@@ -555,42 +592,68 @@ func calculateSeasonalAvg(rawData []RawStationData, southernHemisphere bool) []*
 				season = "Summer"
 			case time.September, time.October, time.November:
 				season = "Autumn"
-			case time.January, time.February, time.December:
+			case time.December:
 				season = "Winter"
+			case time.January, time.February:
+				season = "Winter"
+				year-- // Jan/Feb belong to previous year's winter (with Dec)
 			}
 		}
 
 		key := fmt.Sprintf("%d-%s", year, season)
-		if _, ok := stats[key]; !ok {
-			stats[key] = &Aggr{}
+		if _, ok := monthly[key]; !ok {
+			monthly[key] = make(map[time.Month]*MonthAggr)
+		}
+		if _, ok := monthly[key][month]; !ok {
+			monthly[key][month] = &MonthAggr{}
 		}
 		switch d.ElementType {
 		case "TMIN":
-			stats[key].sumMin += d.Value
-			stats[key].countMin++
+			monthly[key][month].sumMin += d.Value
+			monthly[key][month].countMin++
 		case "TMAX":
-			stats[key].sumMax += d.Value
-			stats[key].countMax++
+			monthly[key][month].sumMax += d.Value
+			monthly[key][month].countMax++
 		}
 	}
 
 	var result []*SeasonalStationData
-	for key, val := range stats {
+	for key, months := range monthly {
 		parts := strings.Split(key, "-")
 		year, _ := strconv.Atoi(parts[0])
 		season := parts[1]
 		sData := &SeasonalStationData{Year: year, Season: season}
 
-		if val.countMin > 0 {
-			avg := (float64(val.sumMin) / float64(val.countMin)) / 10.0
+		// average of monthly means for TMIN
+		var sumMonthlyMin float64
+		var countMonthlyMin int
+		for _, m := range months {
+			if m.countMin > 0 {
+				sumMonthlyMin += float64(m.sumMin) / float64(m.countMin)
+				countMonthlyMin++
+			}
+		}
+		if countMonthlyMin > 0 {
+			avg := (sumMonthlyMin / float64(countMonthlyMin)) / 10.0
 			avg = math.Round(avg*10) / 10
 			sData.TMin = &avg
 		}
-		if val.countMax > 0 {
-			avg := (float64(val.sumMax) / float64(val.countMax)) / 10.0
+
+		// average of monthly means for TMAX
+		var sumMonthlyMax float64
+		var countMonthlyMax int
+		for _, m := range months {
+			if m.countMax > 0 {
+				sumMonthlyMax += float64(m.sumMax) / float64(m.countMax)
+				countMonthlyMax++
+			}
+		}
+		if countMonthlyMax > 0 {
+			avg := (sumMonthlyMax / float64(countMonthlyMax)) / 10.0
 			avg = math.Round(avg*10) / 10
 			sData.TMax = &avg
 		}
+
 		result = append(result, sData)
 	}
 	slices.SortFunc(result, func(a, b *SeasonalStationData) int {
